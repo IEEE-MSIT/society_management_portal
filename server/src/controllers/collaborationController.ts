@@ -24,7 +24,7 @@ export const createProject = async (
 
     // Resolve member id of the current user
     const member = await prisma.member.findUnique({
-      where: { userId: req.user.userId },
+      where: { userId: req.user!.userId },
     });
 
     if (!member) {
@@ -251,7 +251,7 @@ export const registerForEvent = async (
 ): Promise<void> => {
   try {
     const member = await prisma.member.findUnique({
-      where: { userId: req.user?.id },
+      where: { userId: req.user?.userId },
     });
 
     if (!member) {
@@ -276,7 +276,7 @@ export const checkInAttendee = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  try:
+  try {
     const societyId = req.user?.societyId;
     const userId = req.user?.userId;
     if (!societyId || !userId) {
@@ -296,7 +296,7 @@ export const checkInAttendee = async (
       return;
     }
 
-    const registration = await collabService.checkInAttendee(id, checkInCode, societyId, member.id);
+    const registration = await collabService.checkInAttendee(id, checkInCode, societyId);
     res.status(200).json({
       success: true,
       message: `Checked in attendee: ${registration.member.firstName} ${registration.member.lastName}`,
@@ -317,7 +317,7 @@ export const updatePortfolio = async (
 ): Promise<void> => {
   try {
     const member = await prisma.member.findUnique({
-      where: { userId: req.user?.id },
+      where: { userId: req.user?.userId },
     });
 
     if (!member) {

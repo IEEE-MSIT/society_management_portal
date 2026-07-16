@@ -46,7 +46,7 @@ Return ONLY a valid JSON object matching this schema:
 }
 `;
 
-      const response = await import('node-fetch').then(m => m.default)(
+      const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
@@ -74,7 +74,7 @@ Return ONLY a valid JSON object matching this schema:
         throw new Error(`Gemini API returned status ${response.status}`);
       }
 
-      const resData = await response.json();
+      const resData = (await response.json()) as any;
       const text = resData.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!text) {

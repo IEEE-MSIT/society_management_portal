@@ -152,7 +152,7 @@ export const createMember = async (
       return;
     }
 
-    const { firstName, lastName, email, phone, roleId, status = 'ACTIVE', bio, profileImage } = req.body;
+    const { firstName, lastName, email, phone, roleId, status = 'ACTIVE', bio, profileImage, unitNumber = 'TBD' } = req.body;
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -201,9 +201,9 @@ export const createMember = async (
           firstName,
           lastName,
           phone,
-          status,
+          unitNumber,
           bio,
-          profileImage,
+          avatarUrl: profileImage,
         },
         include: {
           user: {
@@ -257,7 +257,7 @@ export const updateMember = async (
       return;
     }
 
-    const { firstName, lastName, phone, roleId, status, bio, profileImage } = req.body;
+    const { firstName, lastName, phone, roleId, status, bio, profileImage, unitNumber } = req.body;
 
     // Update member and user inside a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -267,9 +267,9 @@ export const updateMember = async (
           firstName,
           lastName,
           phone,
-          status,
+          unitNumber,
           bio,
-          profileImage,
+          avatarUrl: profileImage,
         },
         include: {
           user: {
@@ -372,7 +372,6 @@ export const deleteMember = async (
         where: { id },
         data: {
           deletedAt: now,
-          status: 'INACTIVE',
         },
       });
 
