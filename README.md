@@ -79,3 +79,10 @@ Password123
 - JWT Authentication
 - Role-Based Access Control (RBAC)
 - Soft Delete support
+
+---
+
+## Deployments
+
+- **Frontend (Vercel)**: [society-management-portal-zeta.vercel.app](https://society-management-portal-zeta.vercel.app)
+- **Backend (Render)**: [society-management-portal-ex3f.onrender.com](https://society-management-portal-ex3f.onrender.com)
