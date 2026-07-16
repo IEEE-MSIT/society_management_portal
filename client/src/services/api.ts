@@ -27,6 +27,7 @@ export const getSocketUrl = (): string => {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 4000, // 4-second request timeout to prevent hanging loaders
   headers: {
     'Content-Type': 'application/json',
   },
