@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 
 export class AIHubService {
   private getApiKey(): string | undefined {
@@ -57,7 +57,7 @@ Provide a structured plan. Return ONLY a valid JSON object matching this schema:
 }
 `;
 
-      const response = await fetch(
+      const response = await nodeFetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
@@ -167,7 +167,7 @@ Based on this raw input: "${userPrompt}"
 Output clean, well-formatted markdown text ready for posting. Keep it under 250 words.
 `;
 
-      const response = await fetch(
+      const response = await nodeFetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',

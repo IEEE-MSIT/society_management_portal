@@ -30,3 +30,5 @@ server/prisma/dev.db-journal
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+.vercel
+.env*
