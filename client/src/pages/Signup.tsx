@@ -9,8 +9,9 @@ const Signup: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-  // If already authenticated, redirect to dashboard
-  if (isAuthenticated && !isLoading) {
+  // If already authenticated and not using Clerk (fallback mode), redirect to dashboard
+  // When Clerk is configured, let Clerk's SignUp component handle the redirect via afterSignUpUrl
+  if (!isClerkConfigured && isAuthenticated && !isLoading) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -39,6 +40,7 @@ const Signup: React.FC = () => {
           {isClerkConfigured ? (
             <SignUp
               signInUrl="/login"
+              afterSignUpUrl="/dashboard"
               appearance={{
                 elements: {
                   card: 'bg-transparent shadow-none border-none p-0 w-full',

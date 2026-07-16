@@ -54,6 +54,17 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     return () => { isMountedRef.current = false; };
   }, []);
 
+  // Reset sync flag when user signs out (isSignedIn goes from true to false)
+  // This allows re-sync when user signs in again
+  useEffect(() => {
+    if (!isSignedIn) {
+      hasSyncedRef.current = false;
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('auth_token');
+    }
+  }, [isSignedIn]);
+
   // Timeout for Clerk initialization (10 seconds) - prevents infinite loading if Clerk fails to load
   useEffect(() => {
     if (isLoaded) {
