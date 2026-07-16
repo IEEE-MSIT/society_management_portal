@@ -28,9 +28,32 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['http://localhost:5180', 'http://127.0.0.1:5180', 'http://localhost:5173', 'http://127.0.0.1:5173', 'https://society-management-portal-zeta.vercel.app'],
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const localAllowed = [
+        'http://localhost:5180',
+        'http://127.0.0.1:5180',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'https://society-management-portal-zeta.vercel.app',
+      ];
+
+      const envAllowed = process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',')
+        : [];
+
+      const isVercel = origin.startsWith('https://society-management-portal') && origin.endsWith('.vercel.app');
+
+      if (localAllowed.includes(origin) || envAllowed.includes(origin) || isVercel) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   })
 );
