@@ -110,6 +110,7 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   useEffect(() => {
     setUnauthorizedHandler(() => {
       if (!isMountedRef.current) return;
+      hasSyncedRef.current = false;
       localStorage.removeItem('auth_token');
       setToken(null);
       setUser(null);

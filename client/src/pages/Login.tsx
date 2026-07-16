@@ -18,7 +18,7 @@ const Login: React.FC = () => {
   // the user (profileError set). DO NOT render <SignIn> here — its afterSignInUrl would
   // immediately auto-redirect back to /dashboard, recreate the reload loop. Show a stable
   // "setting up / error" panel instead (with a sign-out option via the AuthBlockedScreen path).
-  if (isClerkConfigured && isClerkSignedIn && !isAuthenticated && !isLoading) {
+  if (isClerkConfigured && isClerkSignedIn && !isAuthenticated) {
     if (profileError) {
       // Surface the error inline; user can sign out (which clears the Clerk session)
       // and return to a clean <SignIn>.

@@ -285,7 +285,10 @@ export const getCurrentUser = async (
         status: user.status,
         societyId: user.societyId,
         societyName: user.society.name,
-        role: user.role.name,
+        role: {
+          id: user.role.id,
+          name: user.role.name,
+        },
         permissions,
         member: user.member
           ? {

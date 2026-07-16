@@ -16,20 +16,30 @@ const Signup: React.FC = () => {
 
   // Hard loop-breaker: a Clerk session is active but backend has not provisioned the user.
   // Don't render <SignUp> (its afterSignUpUrl would bounce back into the loop).
-  if (isClerkConfigured && isClerkSignedIn && !isAuthenticated && !isLoading) {
+  if (isClerkConfigured && isClerkSignedIn && !isAuthenticated) {
+    if (profileError) {
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center bg-slate-955 px-4">
+          <div className="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl text-center space-y-5">
+            <div className="mx-auto h-12 w-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-400 border border-rose-500/20">
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-100">Account not ready</h1>
+              <p className="text-sm text-slate-400 mt-2">
+                {profileError}
+              </p>
+            </div>
+            <p className="text-xs text-slate-500">Sign out and sign back in to retry.</p>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 px-4">
-        <div className="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl text-center space-y-5">
-          <div className="mx-auto h-12 w-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-400 border border-rose-500/20">
-            <span style={{ fontSize: '20px' }}>⚠️</span>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-100">Account not ready</h1>
-            <p className="text-sm text-slate-400 mt-2">
-              {profileError || 'Your account is still being set up.'}
-            </p>
-          </div>
-          <p className="text-xs text-slate-500">Sign out and sign back in to retry.</p>
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+          <p className="text-sm font-medium text-slate-400">Setting up your account…</p>
         </div>
       </div>
     );
