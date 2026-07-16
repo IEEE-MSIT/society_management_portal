@@ -34,7 +34,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Clerk-powered Auth Provider
+const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoaded, isSignedIn, getToken, signOut } = useClerkAuth();
   const { user: clerkUser } = useClerkUser();
   const [user, setUser] = useState<User | null>(null);
@@ -84,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     syncSession();
   }, [isLoaded, isSignedIn, getToken, clerkUser]);
 
-  // login is deprecated but we keep the signature for backwards compatibility
   const login = (newToken: string, newUser: User) => {
     localStorage.setItem('auth_token', newToken);
     setToken(newToken);
@@ -121,6 +121,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// Fallback/Warning Banner Component
+const FallbackWarningBanner: React.FC = () => {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '16px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 99999,
+      background: 'rgba(239, 68, 68, 0.15)',
+      backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(239, 68, 68, 0.3)',
+      borderRadius: '12px',
+      padding: '12px 24px',
+      color: '#fca5a5',
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '13px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+      maxWidth: '90%',
+      width: 'max-content'
+    }}>
+      <span style={{ fontSize: '16px' }}>⚠️</span>
+      <div>
+        <strong>Clerk Configuration Required:</strong> Missing VITE_CLERK_PUBLISHABLE_KEY environment variable. UI features are running in preview mode.
+      </div>
+    </div>
+  );
+};
+
+// Fallback Auth Provider for when Clerk is not configured
+const FallbackAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const checkLocalToken = async () => {
+      const localToken = localStorage.getItem('auth_token');
+      if (localToken) {
+        try {
+          setToken(localToken);
+          const response = await api.get('/auth/me');
+          if (response.data?.success) {
+            setUser(response.data.user);
+          }
+        } catch {
+          localStorage.removeItem('auth_token');
+        }
+      }
+      setIsLoading(false);
+    };
+    checkLocalToken();
+  }, []);
+
+  const login = (newToken: string, newUser: User) => {
+    localStorage.setItem('auth_token', newToken);
+    setToken(newToken);
+    setUser(newUser);
+  };
+
+  const logout = async () => {
+    localStorage.removeItem('auth_token');
+    setToken(null);
+    setUser(null);
+    window.location.href = '/login';
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    if (user.role.name === 'Core Admin') return true;
+    return user.permissions.includes(permission);
+  };
+
+  const value = {
+    user,
+    token,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout,
+    hasPermission,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      <FallbackWarningBanner />
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Main AuthProvider wrapper
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+  if (isClerkConfigured) {
+    return <ClerkAuthProvider>{children}</ClerkAuthProvider>;
+  } else {
+    return <FallbackAuthProvider>{children}</FallbackAuthProvider>;
+  }
 };
 
 export const useAuth = () => {
