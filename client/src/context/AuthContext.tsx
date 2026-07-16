@@ -156,7 +156,7 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
       // Timeout for profile fetch (8 seconds) - prevents infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 8000);
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 60000);
       });
 
       try {
