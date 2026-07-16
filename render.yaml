@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: society-portal-backend
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npx prisma db push && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: true
+      - key: CLERK_SECRET_KEY
+        sync: true
+      - key: ALLOWED_ORIGINS
+        sync: true
+      - key: DATABASE_URL
+        value: file:./dev.db
