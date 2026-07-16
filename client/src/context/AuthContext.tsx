@@ -43,6 +43,7 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
   const [clerkError, setClerkError] = useState<string | null>(null);
   const [clerkLoaded, setClerkLoaded] = useState(false);
+  const [clerkFailed, setClerkFailed] = useState(false);
 
   // Use refs to avoid stale closures and infinite loops
   const hasSyncedRef = useRef(false);
@@ -61,6 +62,7 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       const timer = setTimeout(() => {
         if (isMountedRef.current && !isLoaded) {
           setClerkError('Clerk initialization timed out. Please check your publishable key and network connection.');
+          setClerkFailed(true);
           setClerkLoaded(true); // Allow app to proceed to fallback/error state
         }
       }, 10000);
@@ -78,9 +80,10 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   }, [getToken]);
 
+  // Session sync effect - runs when Clerk loads and user is signed in
   useEffect(() => {
     // Only sync once when Clerk is loaded and user is signed in
-    if (!clerkLoaded || !isSignedIn || hasSyncedRef.current) return;
+    if (!clerkLoaded || !isSignedIn || hasSyncedRef.current || clerkFailed) return;
 
     const syncSession = async () => {
       hasSyncedRef.current = true;
@@ -126,8 +129,13 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     };
 
     syncSession();
-  }, [clerkLoaded, isSignedIn, stableGetToken]);
+  }, [clerkLoaded, isSignedIn, stableGetToken, clerkFailed]);
   // Note: clerkUser intentionally omitted from deps to prevent re-sync on user object changes
+
+  // If Clerk failed, immediately render FallbackAuthProvider to stop all loading
+  if (clerkFailed) {
+    return <FallbackAuthProvider>{children}</FallbackAuthProvider>;
+  }
 
   const login = (newToken: string, newUser: User) => {
     localStorage.setItem('auth_token', newToken);
@@ -256,10 +264,12 @@ const FallbackAuthProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-  if (isClerkConfigured) {
-    return <ClerkAuthProvider>{children}</ClerkAuthProvider>;
+  if (!isClerkConfigured) {
+    return <FallbackAuthProvider>{children}</FallbackAuthProvider>;
   }
-  return <FallbackAuthProvider>{children}</FallbackAuthProvider>;
+
+  // Clerk is configured, use ClerkAuthProvider which handles its own fallback on failure
+  return <ClerkAuthProvider>{children}</ClerkAuthProvider>;
 };
 
 export const useAuth = () => {
