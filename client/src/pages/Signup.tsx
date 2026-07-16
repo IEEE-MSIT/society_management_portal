@@ -6,13 +6,33 @@ import { Building, ShieldAlert } from 'lucide-react';
 import AnimatedPage from '../components/AnimatedPage.js';
 
 const Signup: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isClerkSignedIn, profileError } = useAuth();
   const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-  // If already authenticated and not using Clerk (fallback mode), redirect to dashboard
-  // When Clerk is configured, let Clerk's SignUp component handle the redirect via afterSignUpUrl
-  if (!isClerkConfigured && isAuthenticated && !isLoading) {
+  // Already fully authenticated → go to dashboard
+  if (isAuthenticated && !isLoading) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Hard loop-breaker: a Clerk session is active but backend has not provisioned the user.
+  // Don't render <SignUp> (its afterSignUpUrl would bounce back into the loop).
+  if (isClerkConfigured && isClerkSignedIn && !isAuthenticated && !isLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 px-4">
+        <div className="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl text-center space-y-5">
+          <div className="mx-auto h-12 w-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-400 border border-rose-500/20">
+            <span style={{ fontSize: '20px' }}>⚠️</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-100">Account not ready</h1>
+            <p className="text-sm text-slate-400 mt-2">
+              {profileError || 'Your account is still being set up.'}
+            </p>
+          </div>
+          <p className="text-xs text-slate-500">Sign out and sign back in to retry.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -39,6 +59,8 @@ const Signup: React.FC = () => {
         <div className="w-full flex justify-center">
           {isClerkConfigured ? (
             <SignUp
+              routing="path"
+              path="/signup"
               signInUrl="/login"
               afterSignUpUrl="/dashboard"
               appearance={{

@@ -6,13 +6,46 @@ import { useAuth } from '../context/AuthContext.js';
 import { Building, ShieldAlert } from 'lucide-react';
 
 const Login: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isClerkSignedIn, profileError } = useAuth();
   const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-  // If already authenticated and not using Clerk (fallback mode), redirect to dashboard
-  // When Clerk is configured, let Clerk's SignIn component handle the redirect via afterSignInUrl
-  if (!isClerkConfigured && isAuthenticated && !isLoading) {
+  // Already fully authenticated (Clerk session + backend user) → go to dashboard
+  if (isAuthenticated && !isLoading) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Hard loop-breaker: a Clerk session is active but the backend has NOT provisioned
+  // the user (profileError set). DO NOT render <SignIn> here — its afterSignInUrl would
+  // immediately auto-redirect back to /dashboard, recreate the reload loop. Show a stable
+  // "setting up / error" panel instead (with a sign-out option via the AuthBlockedScreen path).
+  if (isClerkConfigured && isClerkSignedIn && !isAuthenticated && !isLoading) {
+    if (profileError) {
+      // Surface the error inline; user can sign out (which clears the Clerk session)
+      // and return to a clean <SignIn>.
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 px-4">
+          <div className="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl text-center space-y-5">
+            <div className="mx-auto h-12 w-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-400 border border-rose-500/20">
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-100">Account not ready</h1>
+              <p className="text-sm text-slate-400 mt-2">{profileError}</p>
+            </div>
+            <p className="text-xs text-slate-500">Sign out and sign back in to retry.</p>
+          </div>
+        </div>
+      );
+    }
+    // Session active but profile still syncing / not yet resolved — hold on the spinner
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+          <p className="text-sm font-medium text-slate-400">Setting up your account…</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -39,6 +72,8 @@ const Login: React.FC = () => {
         <div className="w-full flex justify-center">
           {isClerkConfigured ? (
             <SignIn
+              routing="path"
+              path="/login"
               signUpUrl="/signup"
               afterSignInUrl="/dashboard"
               appearance={{

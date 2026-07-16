@@ -53,25 +53,29 @@ api.interceptors.request.use(
   }
 );
 
-// Guard to prevent infinite redirect loops on repeated 401s
-let isRedirectingToLogin = false;
+// A handler (registered by AuthContext) that resets auth state on a 401.
+// This lets PrivateRoute perform a proper SPA redirect (<Navigate>) instead of
+// us touching window.location, which is what previously caused the reload loop.
+let unauthorizedHandler: (() => void) | null = null;
+export const setUnauthorizedHandler = (fn: (() => void) | null): void => {
+  unauthorizedHandler = fn;
+};
 
 // Response interceptor to handle token expiry / unauthenticated requests.
-// IMPORTANT: we use SPA navigation (history.replaceState), NOT window.location.href,
-// to avoid a full-page reload loop when the backend is unreachable (e.g. wrong VITE_API_URL).
+// We NEVER call window.location.* here. We only clear the token and notify
+// AuthContext, which drives a single SPA redirect to /login via <Navigate>.
+// This is what hard-fixes the infinite reload/redirect glitch.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('auth_token');
-
-      const isOnLogin = window.location.pathname.includes('/login');
-      if (!isOnLogin && !isRedirectingToLogin) {
-        isRedirectingToLogin = true;
-        // SPA navigation — no full reload — prevents the infinite reload glitch
-        window.history.replaceState(null, '', '/login');
-        // Reset guard after a moment so a later genuine 401 can still redirect
-        setTimeout(() => { isRedirectingToLogin = false; }, 2000);
+      if (unauthorizedHandler) {
+        try {
+          unauthorizedHandler();
+        } catch {
+          /* no-op */
+        }
       }
     }
     return Promise.reject(error);
