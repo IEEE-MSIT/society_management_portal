@@ -33,4 +33,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['three'],
   },
+  build: {
+    chunkSizeWarningLimit: 1600, // Silence warning for large chunks like Three.js and Clerk
+  },
 })
