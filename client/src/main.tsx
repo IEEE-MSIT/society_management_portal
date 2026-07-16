@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { ClerkProvider } from '@clerk/clerk-react'
 import './index.css'
 import App from './App.tsx'
-import SplashLoader from './components/SplashLoader.tsx'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -16,7 +15,6 @@ if (!PUBLISHABLE_KEY && import.meta.env.DEV) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <SplashLoader />
     {!PUBLISHABLE_KEY ? (
       <App />
     ) : (

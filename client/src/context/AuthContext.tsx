@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/clerk-react';
 import api from '../services/api.js';
 
@@ -41,27 +41,68 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
+  const [clerkError, setClerkError] = useState<string | null>(null);
+  const [clerkLoaded, setClerkLoaded] = useState(false);
+
+  // Use refs to avoid stale closures and infinite loops
+  const hasSyncedRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  // Timeout for Clerk initialization (10 seconds) - prevents infinite loading if Clerk fails to load
+  useEffect(() => {
+    if (isLoaded) {
+      setClerkLoaded(true);
+    } else {
+      const timer = setTimeout(() => {
+        if (isMountedRef.current && !isLoaded) {
+          setClerkError('Clerk initialization timed out. Please check your publishable key and network connection.');
+          setClerkLoaded(true); // Allow app to proceed to fallback/error state
+        }
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoaded]);
+
+  // Stable getToken reference to prevent infinite useEffect loops
+  const stableGetToken = useCallback(async () => {
+    try {
+      return await getToken();
+    } catch (e) {
+      console.error('getToken failed:', e);
+      return null;
+    }
+  }, [getToken]);
+
+  useEffect(() => {
+    // Only sync once when Clerk is loaded and user is signed in
+    if (!clerkLoaded || !isSignedIn || hasSyncedRef.current) return;
+
     const syncSession = async () => {
-      if (!isLoaded) return;
-
-      if (!isSignedIn) {
-        localStorage.removeItem('auth_token');
-        setToken(null);
-        setUser(null);
-        setIsLoadingProfile(false);
-        return;
-      }
-
+      hasSyncedRef.current = true;
       setIsLoadingProfile(true);
+      setClerkError(null);
+
+      // Timeout for profile fetch (8 seconds) - prevents infinite loading
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 8000);
+      });
+
       try {
-        const clerkToken = await getToken();
+        const clerkToken = await Promise.race([stableGetToken(), timeoutPromise]);
+        if (!isMountedRef.current) return;
+
         if (clerkToken) {
           localStorage.setItem('auth_token', clerkToken);
           setToken(clerkToken);
 
-          const response = await api.get('/auth/me');
+          const response = await Promise.race([api.get('/auth/me'), timeoutPromise]);
+          if (!isMountedRef.current) return;
+
           if (response.data?.success) {
             setUser(response.data.user);
           } else {
@@ -71,17 +112,22 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           }
         }
       } catch (error) {
+        if (!isMountedRef.current) return;
         console.error('Failed to sync Clerk authentication with backend:', error);
         localStorage.removeItem('auth_token');
         setToken(null);
         setUser(null);
+        setClerkError(error instanceof Error ? error.message : 'Authentication failed');
       } finally {
-        setIsLoadingProfile(false);
+        if (isMountedRef.current) {
+          setIsLoadingProfile(false);
+        }
       }
     };
 
     syncSession();
-  }, [isLoaded, isSignedIn, getToken, clerkUser]);
+  }, [clerkLoaded, isSignedIn, stableGetToken]);
+  // Note: clerkUser intentionally omitted from deps to prevent re-sync on user object changes
 
   const login = (newToken: string, newUser: User) => {
     localStorage.setItem('auth_token', newToken);
@@ -113,12 +159,40 @@ const ClerkAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       user,
       token,
       isAuthenticated: !!user,
-      isLoading: !isLoaded || isLoadingProfile,
+      isLoading: !clerkLoaded || isLoadingProfile,
       login,
       logout,
       hasPermission,
     }}>
       {children}
+      {clerkError && (
+        <div style={{
+          position: 'fixed',
+          top: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 99999,
+          background: 'rgba(239, 68, 68, 0.15)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '12px',
+          padding: '12px 24px',
+          color: '#fca5a5',
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: '13px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)',
+          maxWidth: '90%',
+          width: 'max-content',
+        }}>
+          <span style={{ fontSize: '16px' }}>⚠️</span>
+          <div>
+            <strong>Auth Error:</strong> {clerkError}. Please refresh or check your Clerk configuration.
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };
