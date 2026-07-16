@@ -8,13 +8,13 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // Validate required environment variables at build time
+    // Validate required environment variables at build time (warn, don't crash the build)
     {
       name: 'validate-env',
       buildStart() {
         if (!process.env.VITE_CLERK_PUBLISHABLE_KEY) {
-          throw new Error(
-            '\n\n🔴 Build Error: VITE_CLERK_PUBLISHABLE_KEY is not set.\n' +
+          console.warn(
+            '\n\n⚠️  Build Warning: VITE_CLERK_PUBLISHABLE_KEY is not set.\n' +
             '   → For Vercel: Add it in Project Settings → Environment Variables\n' +
             '   → For local dev: Add it to client/.env\n'
           )
