@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { initSocket } from './config/socket.js';
 
 // Load environment variables
 dotenv.config();
@@ -11,6 +13,12 @@ dotenv.config();
 import authRoutes from './routes/authRoutes.js';
 import memberRoutes from './routes/memberRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
+import societyRoutes from './routes/societyRoutes.js';
+import visitorRoutes from './routes/visitorRoutes.js';
+import bookingRoutes from './routes/bookingRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
+import awardRoutes from './routes/awardRoutes.js';
+import collaborationRoutes from './routes/collaborationRoutes.js';
 import { errorHandler } from './middlewares/error.js';
 
 const app = express();
@@ -22,7 +30,7 @@ app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['http://localhost:5173', 'http://127.0.0.1:5173'], // Dev frontend defaults
+      : ['http://localhost:5180', 'http://127.0.0.1:5180', 'http://localhost:5173', 'http://127.0.0.1:5173'], // Dev frontend defaults
     credentials: true,
   })
 );
@@ -33,10 +41,23 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // Parse JSON Bodies
 app.use(express.json());
 
+// Rate Limiter
+import { rateLimiter } from './middlewares/rateLimiter.js';
+app.use(rateLimiter);
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
+app.use('/api/v1/societies', societyRoutes);
+app.use('/api/v1/visitors', visitorRoutes);
+app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/complaints', complaintRoutes);
+app.use('/api/v1/awards', awardRoutes);
+app.use('/api/v1', collaborationRoutes);
+
+
+
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
@@ -58,8 +79,12 @@ app.use('*', (req, res) => {
 // Error handling middleware (MUST be last)
 app.use(errorHandler);
 
+// Create HTTP Server & Init Socket.IO
+const httpServer = createServer(app);
+initSocket(httpServer);
+
 // Start Server
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`===============================================`);
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);

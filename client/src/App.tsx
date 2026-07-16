@@ -19,6 +19,15 @@ import EditMember from './pages/EditMember.js';
 import MemberProfile from './pages/MemberProfile.js';
 import Unauthorized from './pages/Unauthorized.js';
 import NotFound from './pages/NotFound.js';
+import Complaints from './pages/Complaints';
+import Visitors from './pages/Visitors';
+import Bookings from './pages/Bookings';
+import AwardsDashboard from './pages/AwardsDashboard';
+import CertificateView from './pages/CertificateView';
+import Projects from './pages/Projects';
+import Events from './pages/Events';
+import Portfolio from './pages/Portfolio';
+import AiHub from './pages/AiHub';
 
 // Create Query Client
 const queryClient = new QueryClient({
@@ -40,6 +49,7 @@ const App: React.FC = () => {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/awards/certificate/:id" element={<CertificateView />} />
 
               {/* Private Protected Routes */}
               <Route element={<PrivateRoute />}>
@@ -60,6 +70,31 @@ const App: React.FC = () => {
 
                   <Route element={<RoleRoute permission="member:update" />}>
                     <Route path="/members/edit/:id" element={<EditMember />} />
+                  </Route>
+
+                  {/* Complaints Route */}
+                  <Route element={<RoleRoute permission="complaint:read" />}>
+                    <Route path="/complaints" element={<Complaints />} />
+                  </Route>
+
+                  {/* Visitors Route */}
+                  <Route element={<RoleRoute permission="visitor:read" />}>
+                    <Route path="/visitors" element={<Visitors />} />
+                  </Route>
+
+                  {/* Bookings Route */}
+                  <Route element={<RoleRoute permission="booking:read" />}>
+                    <Route path="/bookings" element={<Bookings />} />
+                  </Route>
+
+                  {/* Awards Route */}
+                  <Route element={<RoleRoute permission="member:read" />}>
+                    <Route path="/awards" element={<AwardsDashboard />} />
+                    <Route path="/projects" element={<Projects />} />
+                    <Route path="/events" element={<Events />} />
+                    <Route path="/portfolio" element={<Portfolio />} />
+                    <Route path="/portfolio/:id" element={<Portfolio />} />
+                    <Route path="/ai-hub" element={<AiHub />} />
                   </Route>
                 </Route>
               </Route>

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext.js';
 import { useToast } from '../context/ToastContext.js';
 import api from '../services/api.js';
+import AnimatedPage from '../components/AnimatedPage.js';
 import {
   Search,
   Plus,
@@ -158,7 +159,8 @@ const MembersList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-slide-in relative">
+    <AnimatedPage>
+    <div className="space-y-6 relative">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -508,6 +510,7 @@ const MembersList: React.FC = () => {
         </div>
       )}
     </div>
+    </AnimatedPage>
   );
 };
 

@@ -18,8 +18,8 @@ export const checkPermission = (requiredPermission: string) => {
       return;
     }
 
-    // Check if the user has the required permission
-    if (permissions.includes(requiredPermission)) {
+    // Check if the user has the required permission or wildcard
+    if (permissions.includes('*') || permissions.includes(requiredPermission)) {
       next();
       return;
     }

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext.js';
 import api from '../services/api.js';
+import AnimatedPage from '../components/AnimatedPage.js';
 import { ArrowLeft, User, Save } from 'lucide-react';
 
 const editMemberFormSchema = z.object({
@@ -126,7 +127,8 @@ const EditMember: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto animate-slide-in">
+    <AnimatedPage>
+    <div className="space-y-6 max-w-2xl mx-auto">
       {/* Back link */}
       <div className="flex items-center gap-2">
         <Link
@@ -331,6 +333,7 @@ const EditMember: React.FC = () => {
         </form>
       </div>
     </div>
+    </AnimatedPage>
   );
 };
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import AnimatedPage from '../components/AnimatedPage.js';
 import { Navigate } from 'react-router-dom';
 import { SignIn } from '@clerk/clerk-react';
 import { useAuth } from '../context/AuthContext.js';
@@ -13,13 +14,14 @@ const Login: React.FC = () => {
   }
 
   return (
+    <AnimatedPage>
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 relative overflow-hidden px-4 py-12">
       {/* Decorative gradient glowing circles */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl" />
 
       {/* Main card */}
-      <div className="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl relative z-10 animate-slide-in flex flex-col items-center">
+      <div className="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl relative z-10 flex flex-col items-center">
         {/* Header */}
         <div className="flex flex-col items-center gap-3 mb-6 text-center">
           <div className="h-12 w-12 rounded-xl bg-indigo-650 flex items-center justify-center text-white border border-indigo-500/30 shadow-lg shadow-indigo-650/20">
@@ -66,6 +68,7 @@ const Login: React.FC = () => {
         </div>
       </div>
     </div>
+    </AnimatedPage>
   );
 };
 

@@ -1,10 +1,12 @@
 import React from 'react';
+import AnimatedPage from '../components/AnimatedPage.js';
 import { Link } from 'react-router-dom';
 import { FileQuestion, ArrowLeft } from 'lucide-react';
 
 const NotFound: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-slide-in">
+    <AnimatedPage>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <div className="p-4 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-6 shadow-lg shadow-indigo-500/5">
         <FileQuestion size={48} />
       </div>
@@ -22,6 +24,7 @@ const NotFound: React.FC = () => {
         </Link>
       </div>
     </div>
+    </AnimatedPage>
   );
 };
 

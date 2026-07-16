@@ -4,11 +4,20 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding database...');
+  console.log('Seeding database with new multi-tenant schema...');
 
   // 1. Clean existing records (in reverse order of dependencies)
   console.log('Cleaning old records...');
+  await prisma.auditLog.deleteMany({});
+  await prisma.booking.deleteMany({});
+  await prisma.facility.deleteMany({});
+  await prisma.transaction.deleteMany({});
+  await prisma.complaintTask.deleteMany({});
+  await prisma.attachment.deleteMany({});
+  await prisma.complaint.deleteMany({});
+  await prisma.visitor.deleteMany({});
   await prisma.member.deleteMany({});
+  await prisma.session.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.rolePermission.deleteMany({});
   await prisma.permission.deleteMany({});
@@ -17,12 +26,36 @@ async function main() {
 
   const passwordHash = await bcrypt.hash('Password123', 10);
 
-  // 2. Create Society A: Greenwood Society
+  // 2. Create Global System Permissions
+  console.log('Creating global permissions...');
+  const permissionNames = [
+    'member:read', 'member:create', 'member:update', 'member:delete',
+    'complaint:read', 'complaint:create', 'complaint:update', 'complaint:delete',
+    'notice:read', 'notice:create', 'notice:update', 'notice:delete',
+    'booking:read', 'booking:create', 'booking:update', 'booking:delete',
+    'visitor:read', 'visitor:create', 'visitor:update', 'visitor:delete'
+  ];
+
+  const permissionsMap: Record<string, any> = {};
+  for (const name of permissionNames) {
+    const permission = await prisma.permission.create({
+      data: {
+        name,
+        description: `Allows action ${name}`,
+      },
+    });
+    permissionsMap[name] = permission;
+  }
+
+  // 3. Create Society A: Greenwood Society
   console.log('Creating societies...');
   const greenwood = await prisma.society.create({
     data: {
       name: 'Greenwood Society',
-      description: 'A lush green residential township with state of the art amenities.',
+      address: '123 Forest Hill Road',
+      city: 'Delhi',
+      state: 'Delhi',
+      zipCode: '110001',
     },
   });
 
@@ -30,7 +63,10 @@ async function main() {
   const skyline = await prisma.society.create({
     data: {
       name: 'Skyline Residency',
-      description: 'Modern high-rise residential apartment complex in the heart of the city.',
+      address: '456 Cyber City Boulevard',
+      city: 'Gurugram',
+      state: 'Haryana',
+      zipCode: '122002',
     },
   });
 
@@ -39,82 +75,58 @@ async function main() {
   for (const society of societies) {
     console.log(`Setting up Roles, Permissions, and Users for: ${society.name}`);
 
-    // 3. Create Permissions
-    const pRead = await prisma.permission.create({
-      data: { name: 'member:read', description: 'Read member list and profile details', societyId: society.id },
-    });
-    const pCreate = await prisma.permission.create({
-      data: { name: 'member:create', description: 'Create/add new members', societyId: society.id },
-    });
-    const pUpdate = await prisma.permission.create({
-      data: { name: 'member:update', description: 'Update existing members', societyId: society.id },
-    });
-    const pDelete = await prisma.permission.create({
-      data: { name: 'member:delete', description: 'Soft-delete members', societyId: society.id },
-    });
-
-    const pAnnRead = await prisma.permission.create({
-      data: { name: 'announcement:read', description: 'Read announcements', societyId: society.id },
-    });
-    const pAnnCreate = await prisma.permission.create({
-      data: { name: 'announcement:create', description: 'Create announcements', societyId: society.id },
-    });
-    const pAnnUpdate = await prisma.permission.create({
-      data: { name: 'announcement:update', description: 'Update and pin announcements', societyId: society.id },
-    });
-    const pAnnDelete = await prisma.permission.create({
-      data: { name: 'announcement:delete', description: 'Delete announcements', societyId: society.id },
-    });
-
-    // 4. Create Roles
+    // 4. Create Society-specific Roles
     const rAdmin = await prisma.role.create({
       data: { name: 'Core Admin', description: 'Administrator with full management privileges', societyId: society.id },
     });
     const rLead = await prisma.role.create({
-      data: { name: 'Core Team Lead', description: 'Team leader with write privileges, except delete', societyId: society.id },
+      data: { name: 'Core Team Lead', description: 'Team leader with write privileges', societyId: society.id },
     });
     const rMember = await prisma.role.create({
       data: { name: 'General Member', description: 'Standard member with read-only access', societyId: society.id },
     });
 
-    // Admin gets all
+    // 5. Map permissions to roles
+    // Admin gets all permissions
     await prisma.rolePermission.createMany({
-      data: [
-        { roleId: rAdmin.id, permissionId: pRead.id, societyId: society.id },
-        { roleId: rAdmin.id, permissionId: pCreate.id, societyId: society.id },
-        { roleId: rAdmin.id, permissionId: pUpdate.id, societyId: society.id },
-        { roleId: rAdmin.id, permissionId: pDelete.id, societyId: society.id },
-        { roleId: rAdmin.id, permissionId: pAnnRead.id, societyId: society.id },
-        { roleId: rAdmin.id, permissionId: pAnnCreate.id, societyId: society.id },
-        { roleId: rAdmin.id, permissionId: pAnnUpdate.id, societyId: society.id },
-        { roleId: rAdmin.id, permissionId: pAnnDelete.id, societyId: society.id },
-      ],
+      data: Object.values(permissionsMap).map((p) => ({
+        roleId: rAdmin.id,
+        permissionId: p.id,
+      })),
     });
 
-    // Lead gets read, create, update
+    // Lead gets read, create, update permissions
+    const leadPermissionNames = [
+      'member:read', 'member:create', 'member:update',
+      'complaint:read', 'complaint:create', 'complaint:update',
+      'notice:read', 'notice:create', 'notice:update',
+      'booking:read', 'booking:create', 'booking:update',
+      'visitor:read', 'visitor:create', 'visitor:update'
+    ];
     await prisma.rolePermission.createMany({
-      data: [
-        { roleId: rLead.id, permissionId: pRead.id, societyId: society.id },
-        { roleId: rLead.id, permissionId: pCreate.id, societyId: society.id },
-        { roleId: rLead.id, permissionId: pUpdate.id, societyId: society.id },
-        { roleId: rLead.id, permissionId: pAnnRead.id, societyId: society.id },
-        { roleId: rLead.id, permissionId: pAnnCreate.id, societyId: society.id },
-        { roleId: rLead.id, permissionId: pAnnUpdate.id, societyId: society.id },
-      ],
+      data: leadPermissionNames.map((name) => ({
+        roleId: rLead.id,
+        permissionId: permissionsMap[name].id,
+      })),
     });
 
-    // Member gets read-only
+    // Member gets read-only and booking/visitor creations
+    const memberPermissionNames = [
+      'member:read', 'complaint:read', 'complaint:create',
+      'notice:read', 'booking:read', 'booking:create',
+      'visitor:read', 'visitor:create'
+    ];
     await prisma.rolePermission.createMany({
-      data: [
-        { roleId: rMember.id, permissionId: pRead.id, societyId: society.id },
-        { roleId: rMember.id, permissionId: pAnnRead.id, societyId: society.id },
-      ],
+      data: memberPermissionNames.map((name) => ({
+        roleId: rMember.id,
+        permissionId: permissionsMap[name].id,
+      })),
     });
 
     // 6. Create Users & Members
     const domain = society.id === greenwood.id ? 'greenwood.com' : 'skyline.com';
 
-    // Admin
+    // Admin User
     const uAdmin = await prisma.user.create({
       data: {
         email: `admin@${domain}`,
@@ -132,12 +144,12 @@ async function main() {
         firstName: 'Amit',
         lastName: society.id === greenwood.id ? 'Sharma' : 'Verma',
         phone: society.id === greenwood.id ? '9876543210' : '9876543211',
-        bio: `${society.name} Core Administrator.`,
-        status: 'ACTIVE',
+        unitNumber: 'A-101',
+        avatarUrl: null,
       },
     });
 
-    // Team Lead
+    // Team Lead User
     const uLead = await prisma.user.create({
       data: {
         email: `lead@${domain}`,
@@ -155,12 +167,12 @@ async function main() {
         firstName: 'Priya',
         lastName: society.id === greenwood.id ? 'Patel' : 'Rao',
         phone: society.id === greenwood.id ? '9876543220' : '9876543221',
-        bio: `${society.name} Core Team Lead.`,
-        status: 'ACTIVE',
+        unitNumber: 'B-202',
+        avatarUrl: null,
       },
     });
 
-    // General Member
+    // General Member User
     const uMember = await prisma.user.create({
       data: {
         email: `member@${domain}`,
@@ -178,12 +190,12 @@ async function main() {
         firstName: 'Rahul',
         lastName: society.id === greenwood.id ? 'Kumar' : 'Gupta',
         phone: society.id === greenwood.id ? '9876543230' : '9876543231',
-        bio: `Resident General Member of ${society.name}.`,
-        status: 'ACTIVE',
+        unitNumber: 'C-303',
+        avatarUrl: null,
       },
     });
 
-    // Create 12 more mock members for pagination testing (Greenwood only)
+    // Seeding 12 mock members (Greenwood only)
     if (society.id === greenwood.id) {
       console.log('Seeding additional mock members for pagination testing...');
       const firstNames = [
@@ -215,15 +227,15 @@ async function main() {
             firstName: firstNames[i],
             lastName: lastNames[i],
             phone: `90000000${i.toString().padStart(2, '0')}`,
-            bio: `Resident member ${firstNames[i]} in Greenwood.`,
-            status: i % 5 === 0 ? 'INACTIVE' : 'ACTIVE',
+            unitNumber: `D-${101 + i}`,
+            avatarUrl: null,
           },
         });
       }
     }
   }
 
-  console.log('Database seeded successfully!');
+  console.log('Database seeded successfully with new schema models!');
 }
 
 main()

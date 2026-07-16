@@ -7,75 +7,40 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// 1. Tenant (Society) Isolation
 model Society {
-  id              String           @id @default(uuid())
-  name            String
-  description     String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  users           User[]
-  roles           Role[]
-  permissions     Permission[]
-  rolePermissions RolePermission[]
-  members         Member[]
-  announcements   Announcement[]
-
-  @@index([deletedAt])
+  users       User[]
+  roles       Role[]
+  members     Member[]
+  visitors    Visitor[]
+  complaints  Complaint[]
+  finance     Transaction[]
+  bookings    Booking[]
+  facilities  Facility[]
+  notices     Notice[]
+  awardRules  AwardRule[]
+  awardNominations AwardNomination[]
+  projects         Project[]
+  events           Event[]
+  contributions    ContributionActivity[]
 }
 
-model Role {
-  id              String           @id @default(uuid())
-  name            String
-  description     String?
-  societyId       String
-  society         Society          @relation(fields: [societyId], references: [id], onDelete: Cascade)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  users           User[]
-  rolePermissions RolePermission[]
-
-  @@unique([name, societyId])
-  @@index([societyId])
-}
-
-model Permission {
-  id              String           @id @default(uuid())
-  name            String           // e.g. "member:read", "member:create", "member:update", "member:delete"
-  description     String?
-  societyId       String
-  society         Society          @relation(fields: [societyId], references: [id], onDelete: Cascade)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  rolePermissions RolePermission[]
-
-  @@unique([name, societyId])
-  @@index([societyId])
-}
-
-model RolePermission {
-  roleId       String
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permissionId String
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  societyId    String
-  society      Society    @relation(fields: [societyId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@id([roleId, permissionId])
-  @@index([societyId])
-}
-
+// 2. User Authentication & Session
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
   passwordHash String?
-  clerkId      String?   @unique
-  status       String    @default("ACTIVE") // ACTIVE, INACTIVE
+  clerkId      String?   @unique // Optional fallback for Clerk migration
+  status       String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
   societyId    String
   society      Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
   roleId       String
@@ -85,61 +50,345 @@ model User {
   deletedAt    DateTime?
 
   member       Member?
-  announcements Announcement[]
-
-  @@index([societyId])
-  @@index([email])
-  @@index([deletedAt])
+  sessions     Session[]
+  complaints   Complaint[] // Created complaints
+  assignedTasks ComplaintTask[] // Assigned complaints (for staff)
+  auditLogs    AuditLog[]
 }
 
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique // Refresh token hash
+  expiresAt    DateTime
+  deviceInfo   String?
+  createdAt    DateTime @default(now())
+}
+
+// 3. RBAC Schema
+model Role {
+  id          String           @id @default(uuid())
+  name        String           // Super Admin, Society Admin, Resident, Security, etc.
+  description String?
+  societyId   String?          // Null if global system role, otherwise tenant-scoped
+  society     Society?         @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  users       User[]
+
+  @@unique([name, societyId])
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String           @unique // e.g. "member:read", "complaint:create"
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// 4. Member Profile Details
 model Member {
   id           String    @id @default(uuid())
-  userId       String?   @unique
-  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   societyId    String
   society      Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
   firstName    String
   lastName     String
+  unitNumber   String    // Flat / Block details
   phone        String?
-  status       String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
-  profileImage String?
-  bio          String?
+  avatarUrl    String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
-
-  @@index([societyId])
-  @@index([societyId, deletedAt])
-  @@index([deletedAt])
+  awardNominations AwardNomination[]
+  bio          String?
+  skills       String?   // Comma-separated or JSON
+  githubUrl    String?
+  linkedinUrl  String?
+  resumeUrl    String?
+  portfolioUrl String?
+  techStack    String?
+  projectMembers   ProjectMember[]
+  assignedTasks    ProjectTask[]
+  eventRegistrations EventRegistration[]
+  contributions    ContributionActivity[]
 }
 
-model Announcement {
+// 5. Visitor Management
+model Visitor {
   id          String   @id @default(uuid())
+  societyId   String
+  society     Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  name        String
+  phone       String
+  purpose     String
+  otpCode     String?  // Secure entry verification OTP
+  qrCodeUrl   String?  // Direct access scan link
+  status      String   @default("PENDING") // PENDING, APPROVED, DENIED, COMPLETED
+  checkIn     DateTime?
+  checkOut    DateTime?
+  createdAt   DateTime @default(now())
+}
+
+// 6. Complaints & AI Processing
+model Complaint {
+  id           String           @id @default(uuid())
+  societyId    String
+  society      Society          @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      User             @relation(fields: [creatorId], references: [id])
+  title        String
+  description  String
+  category     String           // AI Categorized: PLUMBING, ELECTRICAL, SECURITY, etc.
+  priority     String           @default("MEDIUM") // AI Classified: LOW, MEDIUM, HIGH, URGENT
+  status       String           @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  tasks        ComplaintTask[]
+  attachments  Attachment[]
+}
+
+model Attachment {
+  id           String    @id @default(uuid())
+  url          String
+  complaintId  String
+  complaint    Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+}
+
+model ComplaintTask {
+  id          String    @id @default(uuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  staffId     String
+  staff       User      @relation(fields: [staffId], references: [id])
+  notes       String?
+  assignedAt  DateTime  @default(now())
+  resolvedAt  DateTime?
+}
+
+// 7. Treasury & Financial Transactions
+model Transaction {
+  id          String   @id @default(uuid())
+  societyId   String
+  society     Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  amount      Float
+  type        String   // INCOME, EXPENSE
+  category    String   // Maintenance Dues, Facility Booking, Event Fee, Vendor Payment
+  description String
+  invoiceUrl  String?
+  createdAt   DateTime @default(now())
+}
+
+// 8. Facilities & Amenity Bookings
+model Facility {
+  id          String    @id @default(uuid())
+  societyId   String
+  society     Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  costPerHour Float     @default(0.0)
+  bookings    Booking[]
+}
+
+model Booking {
+  id          String   @id @default(uuid())
+  societyId   String
+  society     Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  facilityId  String
+  facility    Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  startTime   DateTime
+  endTime     DateTime
+  status      String   @default("CONFIRMED") // CONFIRMED, CANCELLED
+  createdAt   DateTime @default(now())
+}
+
+// 9. Notices & Broadcasts
+model Notice {
+  id          String   @id @default(uuid())
+  societyId   String
+  society     Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
   title       String
   content     String
   isPinned    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// 10. Audit Logs
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g. "USER_LOGIN", "COMPLAINT_RESOLVED"
+  details   String   // JSON string of changes
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+// 11. Awards & Recognition Module
+model AwardRule {
+  id           String            @id @default(uuid())
+  societyId    String
+  society      Society           @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  awardType    String            // MEMBER_OF_MONTH, BEST_VOLUNTEER, BEST_DEVELOPER, BEST_DESIGNER, etc.
+  name         String            // Display name e.g., "Best Developer of the Month"
+  description  String?
+  minEvents    Int               @default(0)
+  minVolHours  Float             @default(0.0)
+  minTasks     Int               @default(0)
+  weightEvents Float             @default(1.0)
+  weightVolHrs Float             @default(1.0)
+  weightTasks  Float             @default(1.0)
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  nominations  AwardNomination[]
+
+  @@unique([societyId, awardType])
+}
+
+model AwardNomination {
+  id          String   @id @default(uuid())
   societyId   String
   society     Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
-  authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
+  awardRuleId String
+  awardRule   AwardRule @relation(fields: [awardRuleId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  period      String   // e.g. "2026-07"
+  score       Float
+  status      String   @default("NOMINATED") // NOMINATED, APPROVED, REJECTED
+  reason      String?  // Score breakdown or manual override justification
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  resourceLinks ResourceLink[]
+  winner      AwardWinner?
 
-  @@index([societyId])
-  @@index([authorId])
-  @@index([isPinned])
+  @@unique([awardRuleId, memberId, period])
 }
 
-model ResourceLink {
-  id             String       @id @default(uuid())
-  title          String
-  url            String
-  announcementId String
-  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@index([announcementId])
+model AwardWinner {
+  id             String          @id @default(uuid())
+  nominationId   String          @unique
+  nomination     AwardNomination @relation(fields: [nominationId], references: [id], onDelete: Cascade)
+  certificateUrl String?
+  qrCodeUrl      String?
+  badgeUrl       String?
+  shareCardUrl   String?
+  createdAt      DateTime        @default(now())
 }
+
+// 12. Project Collaboration Module
+model Project {
+  id           String             @id @default(uuid())
+  societyId    String
+  society      Society            @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  title        String
+  description  String
+  githubUrl    String?
+  demoUrl      String?
+  techStack    String             // Comma-separated or JSON list
+  status       String             @default("IDEATION") // IDEATION, DEVELOPMENT, COMPLETED, ARCHIVED
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  members      ProjectMember[]
+  milestones   ProjectMilestone[]
+  tasks        ProjectTask[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role      String   // OWNER, LEAD, DEVELOPER, DESIGNER, PR
+  joinedAt  DateTime @default(now())
+
+  @@unique([projectId, memberId])
+}
+
+model ProjectMilestone {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model ProjectTask {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      String    @default("TODO") // TODO, IN_PROGRESS, IN_REVIEW, DONE
+  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  dueDate     DateTime?
+  assigneeId  String?
+  assignee    Member?   @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// 13. Event Management Module
+model Event {
+  id           String              @id @default(uuid())
+  societyId    String
+  society      Society             @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  title        String
+  description  String
+  bannerUrl    String?
+  startDate    DateTime
+  endDate      DateTime
+  location     String
+  budget       Float               @default(0.0)
+  speakerInfo  String?             // JSON or text list of speakers
+  sponsorInfo  String?             // JSON or text list of sponsors
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  registrations EventRegistration[]
+}
+
+model EventRegistration {
+  id           String    @id @default(uuid())
+  eventId      String
+  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId     String
+  member       Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  checkInCode  String    @unique
+  isCheckedIn  Boolean   @default(false)
+  checkInTime  DateTime?
+  rating       Int?
+  feedback     String?
+  createdAt    DateTime  @default(now())
+
+  @@unique([eventId, memberId])
+}
+
+// 14. Contribution Logs
+model ContributionActivity {
+  id           String   @id @default(uuid())
+  societyId    String
+  society      Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  memberId     String
+  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  activityType String   // VOLUNTEER, EVENT_ORGANIZED, WORKSHOP, TECHNICAL, DESIGN, PR, CONTENT
+  description  String
+  scorePoints  Float
+  date         DateTime @default(now())
+}
+
+

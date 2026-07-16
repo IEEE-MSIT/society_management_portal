@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.js';
+import { gsap } from 'gsap';
 import {
   LayoutDashboard,
   Users,
@@ -11,12 +12,22 @@ import {
   Building,
   User as UserIcon,
   Shield,
+  ClipboardList,
+  ShieldAlert,
+  Calendar,
+  Trophy,
+  FolderGit2,
+  Cpu,
 } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const { user, logout, hasPermission } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const prevPathRef = useRef(location.pathname);
 
   const navigationItems = [
     {
@@ -36,6 +47,54 @@ const Layout: React.FC = () => {
       path: '/members/add',
       icon: UserPlus,
       show: hasPermission('member:create'),
+    },
+    {
+      name: 'Complaints',
+      path: '/complaints',
+      icon: ClipboardList,
+      show: hasPermission('complaint:read'),
+    },
+    {
+      name: 'Visitors',
+      path: '/visitors',
+      icon: ShieldAlert,
+      show: hasPermission('visitor:read'),
+    },
+    {
+      name: 'Facility Bookings',
+      path: '/bookings',
+      icon: Calendar,
+      show: hasPermission('booking:read'),
+    },
+    {
+      name: 'Awards & Badges',
+      path: '/awards',
+      icon: Trophy,
+      show: hasPermission('member:read'),
+    },
+    {
+      name: 'Project Sprints',
+      path: '/projects',
+      icon: FolderGit2,
+      show: hasPermission('member:read'),
+    },
+    {
+      name: 'Events Hub',
+      path: '/events',
+      icon: Calendar,
+      show: hasPermission('member:read'),
+    },
+    {
+      name: 'Professional Portfolio',
+      path: '/portfolio',
+      icon: UserIcon,
+      show: hasPermission('member:read'),
+    },
+    {
+      name: 'AI Productivity Hub',
+      path: '/ai-hub',
+      icon: Cpu,
+      show: hasPermission('member:read'),
     },
   ];
 
@@ -60,18 +119,74 @@ const Layout: React.FC = () => {
     }
   };
 
+  /* ----- GSAP: Sidebar entrance animation on mount ----- */
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+
+    const ctx = gsap.context(() => {
+      // Logo slides in
+      gsap.fromTo(sidebar.querySelector('.sidebar-brand'),
+        { x: -30, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }
+      );
+
+      // Nav links stagger in
+      const navLinks = sidebar.querySelectorAll('.nav-link');
+      gsap.fromTo(navLinks,
+        { x: -40, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.4, stagger: 0.05, delay: 0.2, ease: 'power2.out' }
+      );
+
+      // User card slides up
+      gsap.fromTo(sidebar.querySelector('.sidebar-user'),
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, delay: 0.6, ease: 'power2.out' }
+      );
+    }, sidebar);
+
+    return () => ctx.revert();
+  }, []);
+
+  /* ----- GSAP: Header entrance animation ----- */
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(header,
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }
+      );
+    }, header);
+
+    return () => ctx.revert();
+  }, []);
+
+  /* ----- GSAP: Page transition on route change ----- */
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main || prevPathRef.current === location.pathname) return;
+    prevPathRef.current = location.pathname;
+
+    gsap.fromTo(main,
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }
+    );
+  }, [location.pathname]);
+
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-slate-800 shrink-0">
+      <aside ref={sidebarRef} className="hidden md:flex flex-col w-64 glass-panel border-r border-slate-800 shrink-0">
         {/* Brand/Logo */}
-        <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
+        <div className="sidebar-brand h-16 flex items-center gap-3 px-6 border-b border-slate-800">
           <Building className="h-6 w-6 text-indigo-400" />
           <span className="font-bold text-lg text-gradient leading-none">Society Portal</span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-1.5">
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto sidebar-scrollbar">
           {activeItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -79,22 +194,23 @@ const Layout: React.FC = () => {
               <Link
                 key={item.name}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                className={`nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group ${
                   isActive
-                    ? 'bg-indigo-600/90 text-white shadow-lg shadow-indigo-600/20'
+                    ? 'bg-indigo-600/90 text-white shadow-lg shadow-indigo-600/20 nav-link-active'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
                 }`}
               >
-                <Icon size={18} />
-                {item.name}
+                <Icon size={18} className={`transition-transform duration-200 ${!isActive ? 'group-hover:scale-110' : ''}`} />
+                <span className={`transition-all duration-200 ${!isActive ? 'group-hover:translate-x-0.5' : ''}`}>{item.name}</span>
+                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />}
               </Link>
             );
           })}
         </nav>
 
         {/* User profile card & Logout */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 p-2 mb-3 rounded-xl bg-slate-900/50 border border-slate-800/50">
+        <div className="sidebar-user p-4 border-t border-slate-800">
+          <div className="flex items-center gap-3 p-2 mb-3 rounded-xl bg-slate-900/50 border border-slate-800/50 hover:border-indigo-500/20 transition-all duration-300">
             {user?.member?.profileImage ? (
               <img
                 src={user.member.profileImage}
@@ -116,9 +232,9 @@ const Layout: React.FC = () => {
 
           <button
             onClick={logout}
-            className="flex items-center justify-center gap-2.5 w-full px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-medium text-slate-400 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/5 transition-all duration-200"
+            className="flex items-center justify-center gap-2.5 w-full px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-medium text-slate-400 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/5 transition-all duration-200 group"
           >
-            <LogOut size={16} />
+            <LogOut size={16} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
             Log Out
           </button>
         </div>
@@ -127,7 +243,7 @@ const Layout: React.FC = () => {
       {/* Mobile Menu Backdrop */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm md:hidden animate-fadeIn"
           onClick={closeMobileMenu}
         />
       )}
@@ -145,13 +261,13 @@ const Layout: React.FC = () => {
           </div>
           <button
             onClick={toggleMobileMenu}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
           >
             <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1.5">
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {activeItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -206,11 +322,11 @@ const Layout: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-slate-850 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
+        <header ref={headerRef} className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-slate-850 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button
               onClick={toggleMobileMenu}
-              className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900 md:hidden"
+              className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900 md:hidden transition-colors"
             >
               <Menu size={20} />
             </button>
@@ -241,7 +357,7 @@ const Layout: React.FC = () => {
 
             <Link
               to={user?.member ? `/members/${user.member.id}` : '#'}
-              className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:border-indigo-500 hover:text-white transition-all shrink-0 overflow-hidden"
+              className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:border-indigo-500 hover:text-white hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300 shrink-0 overflow-hidden"
               title="View Profile"
             >
               {user?.member?.profileImage ? (
@@ -258,7 +374,7 @@ const Layout: React.FC = () => {
         </header>
 
         {/* Router Outlet for nested page views */}
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+        <main ref={mainRef} className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
           <Outlet />
         </main>
       </div>

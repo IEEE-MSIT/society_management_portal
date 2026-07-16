@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import bcrypt from 'bcrypt';
+import { AuthService } from '../services/authService.js';
 import prisma from '../config/db.js';
-import { generateToken } from '../utils/jwt.js';
+
+const authService = new AuthService();
 
 export const login = async (
   req: Request,
@@ -10,112 +11,37 @@ export const login = async (
 ): Promise<void> => {
   try {
     const { email, password } = req.body;
+    const deviceInfo = req.headers['user-agent'];
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        society: true,
-        role: {
-          include: {
-            rolePermissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-        member: true,
-      },
-    });
-
-    // Check if user exists and is not soft-deleted
-    if (!user || user.deletedAt) {
-      res.status(401).json({
+    if (!email || !password) {
+      res.status(400).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Email and password are required.',
       });
       return;
     }
 
-    // Check user status
-    if (user.status !== 'ACTIVE') {
-      res.status(403).json({
-        success: false,
-        message: 'Your account is inactive. Please contact your administrator.',
-      });
-      return;
-    }
+    const data = await authService.login(email, password, deviceInfo);
 
-    // Check if society is active
-    if (user.society.deletedAt) {
-      res.status(403).json({
-        success: false,
-        message: 'Your society is inactive. Please contact support.',
-      });
-      return;
-    }
-
-    // Verify password
-    if (!user.passwordHash) {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
-      return;
-    }
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
-      return;
-    }
-
-    // Extract permission names
-    const permissions = user.role.rolePermissions.map(
-      (rp) => rp.permission.name
-    );
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      roleId: user.roleId,
-      roleName: user.role.name,
-      societyId: user.societyId,
-      permissions,
+    // Set refresh token in HTTP-only cookie
+    res.cookie('refreshToken', data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        status: user.status,
-        societyId: user.societyId,
-        societyName: user.society.name,
-        role: {
-          id: user.role.id,
-          name: user.role.name,
-        },
-        permissions,
-        member: user.member
-          ? {
-              id: user.member.id,
-              firstName: user.member.firstName,
-              lastName: user.member.lastName,
-              phone: user.member.phone,
-              profileImage: user.member.profileImage,
-            }
-          : null,
-      },
+      accessToken: data.accessToken,
+      user: data.user,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    res.status(401).json({
+      success: false,
+      message: error.message || 'Login failed',
+    });
   }
 };
 
@@ -125,14 +51,69 @@ export const logout = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Stateless logout: client just discards the token.
-    // We return a success response.
+    let token = req.cookies?.refreshToken;
+
+    if (!token && req.headers.cookie) {
+      const cookies = Object.fromEntries(
+        req.headers.cookie.split('; ').map((c) => c.split('='))
+      );
+      token = cookies['refreshToken'];
+    }
+
+    if (token) {
+      await authService.logout(token);
+    }
+
+    // Clear client cookies
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
     res.status(200).json({
       success: true,
-      message: 'Logout successful. Please clear the token from your client storage.',
+      message: 'Logged out successfully.',
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const refreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    let token = req.cookies?.refreshToken;
+
+    if (!token && req.headers.cookie) {
+      const cookies = Object.fromEntries(
+        req.headers.cookie.split('; ').map((c) => c.split('='))
+      );
+      token = cookies['refreshToken'];
+    }
+
+    if (!token) {
+      res.status(401).json({
+        success: false,
+        message: 'Session invalid: Refresh token missing.',
+      });
+      return;
+    }
+
+    const data = await authService.refreshToken(token);
+
+    res.status(200).json({
+      success: true,
+      accessToken: data.accessToken,
+    });
+  } catch (error: any) {
+    res.status(401).json({
+      success: false,
+      message: error.message || 'Token refresh failed.',
+    });
   }
 };
 
@@ -153,7 +134,7 @@ export const getCurrentUser = async (
     const { userId } = req.user;
     let user;
 
-    // Check if the userId is a Clerk ID (starts with "user_") or UUID
+    // Check if user exists by local ID or Clerk ID
     const isClerkId = userId.startsWith('user_');
 
     if (isClerkId) {
@@ -163,7 +144,7 @@ export const getCurrentUser = async (
           society: true,
           role: {
             include: {
-              rolePermissions: {
+              permissions: {
                 include: {
                   permission: true,
                 },
@@ -180,7 +161,7 @@ export const getCurrentUser = async (
           society: true,
           role: {
             include: {
-              rolePermissions: {
+              permissions: {
                 include: {
                   permission: true,
                 },
@@ -192,141 +173,87 @@ export const getCurrentUser = async (
       });
     }
 
-    // Auto-register or link if user authenticated via Clerk but not found in DB
+    // Auto-register Clerk user if not found in database
     if (!user && isClerkId) {
       const secretKey = process.env.CLERK_SECRET_KEY;
-      const { createClerkClient } = await import('@clerk/backend');
-      const clerkClient = createClerkClient({ secretKey });
-      const clerkUser = await clerkClient.users.getUser(userId);
-      const email = clerkUser.emailAddresses[0]?.emailAddress;
+      if (secretKey) {
+        try {
+          const { createClerkClient } = await import('@clerk/backend');
+          const clerkClient = createClerkClient({ secretKey });
+          const clerkUser = await clerkClient.users.getUser(userId);
+          const email = clerkUser.emailAddresses[0]?.emailAddress;
 
-      if (!email) {
-        res.status(400).json({
-          success: false,
-          message: 'Clerk account does not have a valid email address.',
-        });
-        return;
-      }
-
-      // Check if user exists by email
-      let existingUser = await prisma.user.findUnique({
-        where: { email },
-        include: {
-          society: true,
-          role: {
-            include: {
-              rolePermissions: {
-                include: {
-                  permission: true,
+          if (email) {
+            // Find default society
+            let defaultSociety = await prisma.society.findFirst();
+            if (!defaultSociety) {
+              // Create a default society if none exists
+              defaultSociety = await prisma.society.create({
+                data: {
+                  name: 'Default Society',
                 },
-              },
-            },
-          },
-          member: true,
-        },
-      });
+              });
+            }
 
-      if (existingUser) {
-        // Link clerkId to existing user record
-        user = await prisma.user.update({
-          where: { id: existingUser.id },
-          data: { clerkId: userId },
-          include: {
-            society: true,
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true,
-                  },
+            // Find default role (General Member)
+            let defaultRole = await prisma.role.findFirst({
+              where: {
+                societyId: defaultSociety.id,
+                name: 'General Member',
+              },
+            });
+
+            if (!defaultRole) {
+              defaultRole = await prisma.role.create({
+                data: {
+                  name: 'General Member',
+                  description: 'Standard member role',
+                  societyId: defaultSociety.id,
                 },
-              },
-            },
-            member: true,
-          },
-        });
-      } else {
-        // Retrieve roleId and societyId from Clerk publicMetadata if they exist (sent via invitation)
-        const metadataSocietyId = clerkUser.publicMetadata?.societyId as string | undefined;
-        const metadataRoleId = clerkUser.publicMetadata?.roleId as string | undefined;
+              });
+            }
 
-        let targetSocietyId = metadataSocietyId;
-        let targetRoleId = metadataRoleId;
+            const firstName = clerkUser.firstName || email.split('@')[0];
+            const lastName = clerkUser.lastName || '';
 
-        // 1. Resolve Society (metadata or fallback to first available)
-        if (!targetSocietyId) {
-          const defaultSociety = await prisma.society.findFirst();
-          if (!defaultSociety) {
-            res.status(500).json({
-              success: false,
-              message: 'No societies configured in database.',
-            });
-            return;
-          }
-          targetSocietyId = defaultSociety.id;
-        }
-
-        // 2. Resolve Role (metadata or fallback to General Member)
-        if (!targetRoleId) {
-          let defaultRole = await prisma.role.findFirst({
-            where: {
-              societyId: targetSocietyId,
-              name: 'General Member',
-            },
-          });
-
-          if (!defaultRole) {
-            defaultRole = await prisma.role.findFirst({
-              where: { societyId: targetSocietyId },
-            });
-          }
-
-          if (!defaultRole) {
-            res.status(500).json({
-              success: false,
-              message: 'No roles configured in database.',
-            });
-            return;
-          }
-          targetRoleId = defaultRole.id;
-        }
-
-        const firstName = clerkUser.firstName || email.split('@')[0];
-        const lastName = clerkUser.lastName || '';
-
-        // 3. Create User & Member
-        user = await prisma.user.create({
-          data: {
-            email,
-            clerkId: userId,
-            status: 'ACTIVE',
-            societyId: targetSocietyId,
-            roleId: targetRoleId,
-            member: {
-              create: {
-                societyId: targetSocietyId,
-                firstName,
-                lastName,
-                phone: clerkUser.phoneNumbers[0]?.phoneNumber || null,
-                profileImage: clerkUser.imageUrl || null,
+            // Create user & member
+            user = await prisma.user.create({
+              data: {
+                email,
+                clerkId: userId,
                 status: 'ACTIVE',
-              },
-            },
-          },
-          include: {
-            society: true,
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true,
+                societyId: defaultSociety.id,
+                roleId: defaultRole.id,
+                member: {
+                  create: {
+                    societyId: defaultSociety.id,
+                    firstName,
+                    lastName,
+                    unitNumber: 'TBD', // default block
+                    phone: clerkUser.phoneNumbers[0]?.phoneNumber || null,
+                    avatarUrl: clerkUser.imageUrl || null,
                   },
                 },
               },
-            },
-            member: true,
-          },
-        });
+              include: {
+                society: true,
+                role: {
+                  include: {
+                    permissions: {
+                      include: {
+                        permission: true,
+                      },
+                    },
+                  },
+                },
+                member: true,
+              },
+            });
+            console.log(`Auto-registered Clerk user: ${email}`);
+          }
+        } catch (clerkErr) {
+          console.error('Failed to auto-register Clerk user:', clerkErr);
+        }
       }
     }
 
@@ -346,7 +273,7 @@ export const getCurrentUser = async (
       return;
     }
 
-    const permissions = user.role.rolePermissions.map(
+    const permissions = user.role.permissions.map(
       (rp) => rp.permission.name
     );
 
@@ -358,20 +285,16 @@ export const getCurrentUser = async (
         status: user.status,
         societyId: user.societyId,
         societyName: user.society.name,
-        role: {
-          id: user.role.id,
-          name: user.role.name,
-        },
+        role: user.role.name,
         permissions,
         member: user.member
           ? {
               id: user.member.id,
               firstName: user.member.firstName,
               lastName: user.member.lastName,
+              unitNumber: user.member.unitNumber,
               phone: user.member.phone,
-              profileImage: user.member.profileImage,
-              bio: user.member.bio,
-              status: user.member.status,
+              avatarUrl: user.member.avatarUrl,
             }
           : null,
       },

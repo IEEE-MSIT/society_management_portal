@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext.js';
 import api from '../services/api.js';
+import AnimatedPage from '../components/AnimatedPage.js';
 import { ArrowLeft, Edit2, Phone, Mail, Building, Calendar } from 'lucide-react';
 
 const MemberProfile: React.FC = () => {
@@ -69,7 +70,8 @@ const MemberProfile: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto animate-slide-in">
+    <AnimatedPage>
+    <div className="space-y-6 max-w-3xl mx-auto">
       {/* Navigation & Actions */}
       <div className="flex justify-between items-center">
         <Link
@@ -205,6 +207,7 @@ const MemberProfile: React.FC = () => {
         </div>
       </div>
     </div>
+    </AnimatedPage>
   );
 };
 
