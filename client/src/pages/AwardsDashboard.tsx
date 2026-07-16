@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AnimatedPage from '../components/AnimatedPage.js';
 import { io, Socket } from 'socket.io-client';
 import { useForm } from 'react-hook-form';
-import api from '../services/api.js';
+import api, { getSocketUrl } from '../services/api.js';
 import { useToast } from '../context/ToastContext.js';
 import { useAuth } from '../context/AuthContext.js';
 import {
@@ -128,7 +128,7 @@ const AwardsDashboard: React.FC = () => {
   // Socket.IO Real-time Winner Announcement
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    const socket: Socket = io('http://localhost:5000', {
+    const socket: Socket = io(getSocketUrl(), {
       auth: { token },
     });
 

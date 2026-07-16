@@ -2,6 +2,29 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
+// Warn in production if using localhost fallback
+if (!import.meta.env.VITE_API_URL && import.meta.env.PROD) {
+  console.error(
+    '[Society Portal] VITE_API_URL is not set — API requests will target localhost and will fail. ' +
+    'Set VITE_API_URL in Vercel Environment Variables to your deployed backend URL.'
+  );
+}
+
+/**
+ * Derive the Socket.IO server URL from the API base URL.
+ * E.g. "https://api.example.com/api/v1" → "https://api.example.com"
+ *      "http://localhost:5000/api/v1"    → "http://localhost:5000"
+ */
+export const getSocketUrl = (): string => {
+  try {
+    const url = new URL(API_BASE_URL);
+    return url.origin;
+  } catch {
+    // Fallback: strip the path portion
+    return API_BASE_URL.replace(/\/api\/v1\/?$/, '') || 'http://localhost:5000';
+  }
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {

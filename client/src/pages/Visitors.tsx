@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AnimatedPage from '../components/AnimatedPage.js';
 import { useForm } from 'react-hook-form';
 import { io, Socket } from 'socket.io-client';
-import api from '../services/api.js';
+import api, { getSocketUrl } from '../services/api.js';
 import { useToast } from '../context/ToastContext.js';
 import { useAuth } from '../context/AuthContext.js';
 import {
@@ -72,7 +72,7 @@ const Visitors: React.FC = () => {
   // Socket.IO Real-time updates for security check-ins
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    const socket: Socket = io('http://localhost:5000', {
+    const socket: Socket = io(getSocketUrl(), {
       auth: { token },
     });
 
@@ -271,7 +271,7 @@ const Visitors: React.FC = () => {
               <div className="flex flex-col items-center justify-center gap-4 bg-slate-950/50 p-6 rounded-xl border border-slate-850/80 print:bg-white print:border-black">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
-                    `http://localhost:5000/api/v1/visitors/verify?otp=${activeVisitor.passCode}`
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/visitors/verify?otp=${activeVisitor.passCode}`
                   )}`}
                   alt="Scannable Visitor QR Code"
                   className="w-40 h-40 border-2 border-indigo-500/30 p-1.5 rounded-lg bg-white print:border-black shadow-lg"
