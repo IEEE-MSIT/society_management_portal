@@ -181,7 +181,7 @@ const Events: React.FC = () => {
             Intelligent event planner, attendee check-in tickets, and sponsor details.
           </p>
         </div>
-        {user?.role === 'Core Admin' && (
+        {user?.role?.name === 'Core Admin' && (
           <button
             onClick={() => setModalOpen(true)}
             className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.25)]"
@@ -279,7 +279,7 @@ const Events: React.FC = () => {
                             Ticket QR Pass
                           </button>
                         )}
-                        {user?.role === 'Core Admin' && (
+                        {user?.role?.name === 'Core Admin' && (
                           <button
                             onClick={() => {
                               setActiveEvent(event);
@@ -498,7 +498,7 @@ const Events: React.FC = () => {
             )}
 
             {/* Verification scanner for Admins */}
-            {user?.role === 'Core Admin' && (
+            {user?.role?.name === 'Core Admin' && (
               <form onSubmit={checkinSub(handleCheckin)} className="space-y-4 text-xs pt-4 border-t border-slate-850">
                 <input
                   type="text"

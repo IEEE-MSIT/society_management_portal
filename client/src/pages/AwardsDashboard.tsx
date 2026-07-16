@@ -61,6 +61,7 @@ interface Nominee {
 interface Winner {
   id: string;
   nomination: {
+    id: string;
     period: string;
     score: number;
     member: {
@@ -204,7 +205,7 @@ const AwardsDashboard: React.FC = () => {
               className="bg-transparent border-none text-slate-200 focus:outline-none cursor-pointer"
             />
           </div>
-          {user?.role === 'Core Admin' && (
+          {user?.role?.name === 'Core Admin' && (
             <button
               onClick={handleEvaluate}
               disabled={evaluating}
@@ -245,7 +246,7 @@ const AwardsDashboard: React.FC = () => {
           <Award className="h-4 w-4" />
           Winners Gallery
         </button>
-        {user?.role === 'Core Admin' && (
+        {user?.role?.name === 'Core Admin' && (
           <button
             onClick={() => setActiveTab('rules')}
             className={`pb-3 font-semibold transition-colors flex items-center gap-2 border-b-2 cursor-pointer ${
@@ -310,7 +311,7 @@ const AwardsDashboard: React.FC = () => {
                               <span className="text-base font-black text-slate-100">{nom.score}</span>
                               <p className="text-[10px] text-slate-500 uppercase tracking-widest">Weighted Score</p>
                             </div>
-                            {user?.role === 'Core Admin' && nom.status === 'NOMINATED' && (
+                            {user?.role?.name === 'Core Admin' && nom.status === 'NOMINATED' && (
                               <button
                                 onClick={() => handleApprove(nom.id)}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"

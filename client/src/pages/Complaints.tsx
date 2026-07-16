@@ -331,7 +331,7 @@ const Complaints: React.FC = () => {
                       })}
                     </span>
                     {/* Admin status control */}
-                    {user?.role === 'Core Admin' && (
+                    {user?.role?.name === 'Core Admin' && (
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-slate-400">Update Status:</label>
                         <select
