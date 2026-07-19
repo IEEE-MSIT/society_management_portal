@@ -9,6 +9,14 @@ import { initSocket } from './config/socket.js';
 // Load environment variables
 dotenv.config();
 
+// Validate required environment variables at startup
+const requiredEnv = ['CLERK_SECRET_KEY', 'CLERK_PUBLISHABLE_KEY', 'DATABASE_URL'];
+requiredEnv.forEach((envVar) => {
+  if (!process.env[envVar]) {
+    console.warn(`⚠️  Startup Warning: Environment variable "${envVar}" is not set.`);
+  }
+});
+
 // Imports
 import authRoutes from './routes/authRoutes.js';
 import memberRoutes from './routes/memberRoutes.js';
