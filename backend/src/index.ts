@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { initSocket } from './config/socket.js';
+import { bootstrapDatabase } from './utils/bootstrap.js';
 
 // Load environment variables
 dotenv.config();
@@ -115,9 +116,10 @@ const httpServer = createServer(app);
 initSocket(httpServer);
 
 // Start Server
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`===============================================`);
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`===============================================`);
+  await bootstrapDatabase();
 });

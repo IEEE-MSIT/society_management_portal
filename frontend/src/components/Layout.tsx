@@ -126,23 +126,31 @@ const Layout: React.FC = () => {
 
     const ctx = gsap.context(() => {
       // Logo slides in
-      gsap.fromTo(sidebar.querySelector('.sidebar-brand'),
-        { x: -30, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }
-      );
+      const brand = sidebar.querySelector('.sidebar-brand');
+      if (brand) {
+        gsap.fromTo(brand,
+          { x: -30, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }
+        );
+      }
 
       // Nav links stagger in
       const navLinks = sidebar.querySelectorAll('.nav-link');
-      gsap.fromTo(navLinks,
-        { x: -40, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.4, stagger: 0.05, delay: 0.2, ease: 'power2.out' }
-      );
+      if (navLinks.length) {
+        gsap.fromTo(navLinks,
+          { x: -40, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.4, stagger: 0.05, delay: 0.2, ease: 'power2.out' }
+        );
+      }
 
       // User card slides up
-      gsap.fromTo(sidebar.querySelector('.sidebar-user'),
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, delay: 0.6, ease: 'power2.out' }
-      );
+      const userCard = sidebar.querySelector('.sidebar-user');
+      if (userCard) {
+        gsap.fromTo(userCard,
+          { y: 20, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, delay: 0.6, ease: 'power2.out' }
+        );
+      }
     }, sidebar);
 
     return () => ctx.revert();

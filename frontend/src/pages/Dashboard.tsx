@@ -89,20 +89,29 @@ const Dashboard: React.FC = () => {
         { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: 'power3.out' }
       );
       // Badge pops in
-      gsap.fromTo(hero.querySelector('.hero-badge'),
-        { y: -20, opacity: 0, scale: 0.8 },
-        { y: 0, opacity: 1, scale: 1, duration: 0.5, delay: 0.3, ease: 'back.out(1.7)' }
-      );
+      const badge = hero.querySelector('.hero-badge');
+      if (badge) {
+        gsap.fromTo(badge,
+          { y: -20, opacity: 0, scale: 0.8 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.5, delay: 0.3, ease: 'back.out(1.7)' }
+        );
+      }
       // Description text fades up
-      gsap.fromTo(hero.querySelector('.hero-desc'),
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.6, delay: 0.5, ease: 'power2.out' }
-      );
+      const desc = hero.querySelector('.hero-desc');
+      if (desc) {
+        gsap.fromTo(desc,
+          { y: 20, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.6, delay: 0.5, ease: 'power2.out' }
+        );
+      }
       // Buttons stagger in
-      gsap.fromTo(hero.querySelectorAll('.hero-btn'),
-        { y: 20, opacity: 0, scale: 0.9 },
-        { y: 0, opacity: 1, scale: 1, duration: 0.5, delay: 0.7, stagger: 0.12, ease: 'back.out(1.5)' }
-      );
+      const buttons = hero.querySelectorAll('.hero-btn');
+      if (buttons.length) {
+        gsap.fromTo(buttons,
+          { y: 20, opacity: 0, scale: 0.9 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.5, delay: 0.7, stagger: 0.12, ease: 'back.out(1.5)' }
+        );
+      }
     }, hero);
     return () => ctx.revert();
   }, []);
@@ -131,20 +140,29 @@ const Dashboard: React.FC = () => {
     const container = bottomRef.current;
     if (!container || isLoading) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(container.querySelectorAll('.animate-section'),
-        { y: 50, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.7, stagger: 0.15, delay: 0.6, ease: 'power3.out' }
-      );
+      const sections = container.querySelectorAll('.animate-section');
+      if (sections.length) {
+        gsap.fromTo(sections,
+          { y: 50, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.7, stagger: 0.15, delay: 0.6, ease: 'power3.out' }
+        );
+      }
       // Member rows slide in from the left
-      gsap.fromTo(container.querySelectorAll('.member-row'),
-        { x: -30, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.5, stagger: 0.08, delay: 1.0, ease: 'power2.out' }
-      );
+      const memberRows = container.querySelectorAll('.member-row');
+      if (memberRows.length) {
+        gsap.fromTo(memberRows,
+          { x: -30, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.5, stagger: 0.08, delay: 1.0, ease: 'power2.out' }
+        );
+      }
       // Quick action links pop in
-      gsap.fromTo(container.querySelectorAll('.quick-link'),
-        { x: 30, opacity: 0, scale: 0.95 },
-        { x: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.1, delay: 1.1, ease: 'power2.out' }
-      );
+      const quickLinks = container.querySelectorAll('.quick-link');
+      if (quickLinks.length) {
+        gsap.fromTo(quickLinks,
+          { x: 30, opacity: 0, scale: 0.95 },
+          { x: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.1, delay: 1.1, ease: 'power2.out' }
+        );
+      }
     }, container);
     return () => ctx.revert();
   }, [isLoading, data]);
