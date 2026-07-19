@@ -8,8 +8,8 @@ export class VisitorService {
     // Generate a 6-digit secure numeric OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Generate a mock secure QR code verification URL
-    const qrCodeUrl = `http://localhost:5000/api/v1/visitors/verify-qr?otp=${otpCode}&societyId=${societyId}`;
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const qrCodeUrl = `${backendUrl}/api/v1/visitors/verify-qr?otp=${otpCode}&societyId=${societyId}`;
 
     const visitor = await visitorRepo.create({
       societyId,
