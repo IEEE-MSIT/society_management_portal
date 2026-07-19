@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import bcrypt from 'bcrypt';
 
 export async function bootstrapDatabase() {
   try {
@@ -96,6 +97,56 @@ export async function bootstrapDatabase() {
         }
       }
     }
+
+    // 4. Ensure admin user gou4371@gmail.com exists with Core Admin role
+    const adminEmail = 'gou4371@gmail.com';
+    const adminPassword = 'Gou@302005';
+    const saltRounds = 10;
+    const adminPasswordHash = await bcrypt.hash(adminPassword, saltRounds);
+
+    const adminRole = await prisma.role.findFirst({
+      where: { name: 'Core Admin', societyId: defaultSociety.id }
+    });
+
+    if (adminRole) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: adminEmail }
+      });
+
+      if (!existingUser) {
+        const newUser = await prisma.user.create({
+          data: {
+            email: adminEmail,
+            passwordHash: adminPasswordHash,
+            status: 'ACTIVE',
+            societyId: defaultSociety.id,
+            roleId: adminRole.id
+          }
+        });
+        await prisma.member.create({
+          data: {
+            userId: newUser.id,
+            societyId: defaultSociety.id,
+            firstName: 'Gourav',
+            lastName: 'Admin',
+            phone: '0000000000',
+            unitNumber: 'Admin-1',
+          }
+        });
+        console.log(`👉 Created admin user: ${adminEmail}`);
+      } else {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            passwordHash: adminPasswordHash,
+            roleId: adminRole.id,
+            status: 'ACTIVE'
+          }
+        });
+        console.log(`👉 Updated existing user to Core Admin: ${adminEmail}`);
+      }
+    }
+
     console.log('✅ Database bootstrap completed successfully.');
   } catch (error) {
     console.error('❌ Error during database bootstrap:', error);
