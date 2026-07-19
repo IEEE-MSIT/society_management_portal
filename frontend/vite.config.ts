@@ -16,7 +16,7 @@ export default defineConfig({
           console.warn(
             '\n\n⚠️  Build Warning: VITE_CLERK_PUBLISHABLE_KEY is not set.\n' +
             '   → For Vercel: Add it in Project Settings → Environment Variables\n' +
-            '   → For local dev: Add it to client/.env\n'
+            '   → For local dev: Add it to frontend/.env\n'
           )
         }
       },

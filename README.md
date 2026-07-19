@@ -24,8 +24,8 @@ This repository contains **Module 1** of a multi-tenant Society Management Porta
 
 ```text
 ├── README.md
-├── client/
-└── server/
+├── frontend/
+└── backend/
 ```
 
 ---
@@ -35,7 +35,7 @@ This repository contains **Module 1** of a multi-tenant Society Management Porta
 ### Backend
 
 ```bash
-cd server
+cd backend
 npm install
 npx prisma migrate dev --name init
 npm run seed
@@ -45,7 +45,7 @@ npm run dev
 ### Frontend
 
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev
 ```

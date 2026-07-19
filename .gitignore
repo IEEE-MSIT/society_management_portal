@@ -1,18 +1,18 @@
 # Dependencies
 node_modules/
-client/node_modules/
-server/node_modules/
+frontend/node_modules/
+backend/node_modules/
 
 # Production builds
 dist/
-client/dist/
-server/dist/
+frontend/dist/
+backend/dist/
 
 # Local databases and SQLite files
 *.db
 *.db-journal
-server/prisma/dev.db
-server/prisma/dev.db-journal
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
 
 # Environment secrets
 .env

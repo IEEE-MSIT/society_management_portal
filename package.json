@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "client"
+    "frontend",
+    "backend"
   ],
   "scripts": {
-    "build": "npm run build -w client"
+    "build": "npm run build -w frontend"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "society-management-server",
+  "name": "society-management-backend",
   "version": "1.0.0",
   "description": "Backend API for Society Management Portal Module 1",
   "main": "dist/index.js",
