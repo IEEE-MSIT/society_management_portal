@@ -274,7 +274,7 @@ export const getCurrentUser = async (
     }
 
     const permissions = user.role.permissions.map(
-      (rp) => rp.permission.name
+      (rp: { permission: { name: string } }) => rp.permission.name
     );
 
     res.status(200).json({

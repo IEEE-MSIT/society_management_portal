@@ -277,7 +277,7 @@ export class CollaborationService {
     if (!member) return null;
 
     // Calculate total contribution score
-    const totalScore = member.contributions.reduce((acc, curr) => acc + curr.scorePoints, 0);
+    const totalScore = member.contributions.reduce((acc: number, curr: { scorePoints: number }) => acc + curr.scorePoints, 0);
 
     return {
       ...member,

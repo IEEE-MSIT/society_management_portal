@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 import prisma from '../config/db.js';
 
 export const getMembers = async (
@@ -183,7 +184,7 @@ export const createMember = async (
     // Create user and member inside a transaction
     const defaultPasswordHash = await bcrypt.hash('ChangeMe123!', 10);
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.create({
         data: {
           email,
@@ -260,7 +261,7 @@ export const updateMember = async (
     const { firstName, lastName, phone, roleId, status, bio, profileImage, unitNumber } = req.body;
 
     // Update member and user inside a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const updatedMember = await tx.member.update({
         where: { id },
         data: {
@@ -366,7 +367,7 @@ export const deleteMember = async (
     }
 
     // Soft delete member and user in transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const now = new Date();
       await tx.member.update({
         where: { id },

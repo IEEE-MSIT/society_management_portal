@@ -32,7 +32,7 @@ export class AuthService {
     }
 
     // Extract permissions
-    const permissions = user.role.permissions.map((rp) => rp.permission.name);
+    const permissions = user.role.permissions.map((rp: { permission: { name: string } }) => rp.permission.name);
 
     const tokenPayload = {
       userId: user.id,
@@ -109,7 +109,7 @@ export class AuthService {
     }
 
     // 3. Retrieve fresh permissions
-    const permissions = session.user.role.permissions.map((rp) => rp.permission.name);
+    const permissions = session.user.role.permissions.map((rp: { permission: { name: string } }) => rp.permission.name);
 
     const tokenPayload = {
       userId: session.user.id,

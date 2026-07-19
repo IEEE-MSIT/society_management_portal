@@ -173,7 +173,7 @@ export const authenticate = async (
         }
 
         const permissions = dbUser.role.permissions.map(
-          (rp) => rp.permission.name
+          (rp: { permission: { name: string } }) => rp.permission.name
         );
 
         req.user = {

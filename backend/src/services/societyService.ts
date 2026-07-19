@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 import prisma from '../config/db.js';
 import { SocietyRepository } from '../repositories/societyRepository.js';
 import { UserRepository } from '../repositories/userRepository.js';
@@ -53,7 +54,7 @@ export class SocietyService {
     const passwordHash = await bcrypt.hash(adminPassword, 10);
 
     // 2. Database transaction to create everything
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // a. Create Society
       const society = await tx.society.create({
         data: {
