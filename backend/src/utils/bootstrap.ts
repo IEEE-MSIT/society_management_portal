@@ -25,13 +25,18 @@ export async function bootstrapDatabase() {
       permissionsMap[name] = perm;
     }
 
-    // 2. Ensure default society
     let defaultSociety = await prisma.society.findFirst();
     if (!defaultSociety) {
       defaultSociety = await prisma.society.create({
-        data: { name: 'Default Society' }
+        data: {
+          name: 'Greenwood Society',
+          address: '123 Forest Hill Road',
+          city: 'Delhi',
+          state: 'Delhi',
+          zipCode: '110001',
+        }
       });
-      console.log('👉 Created Default Society');
+      console.log('👉 Created Greenwood Society as default');
     }
 
     // 3. Ensure default roles for default society
